@@ -1,0 +1,42 @@
+services:
+  # Serves the Open Platforms page that Pilot 2 loads
+  web:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./web:/usr/share/nginx/html:ro
+    restart: unless-stopped
+
+  # Local test broker (password required, as DJI's docs demand).
+  # Once everything works, point the page and the watcher at your partner's broker instead.
+  broker:
+    image: eclipse-mosquitto:2.0
+    ports:
+      - "1883:1883"   # MQTT over TCP  -> tcp://<server-ip>:1883
+      - "8083:8083"   # MQTT over WebSocket -> ws://<server-ip>:8083
+    environment:
+      MQTT_USER: ${MQTT_USER:-pilot}
+      MQTT_PASS: ${MQTT_PASS:-pilot123}
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    entrypoint: >
+      sh -c "mosquitto_passwd -c -b /mosquitto/data/passwd \"$$MQTT_USER\" \"$$MQTT_PASS\" &&
+             chown mosquitto:mosquitto /mosquitto/data/passwd &&
+             chmod 0700 /mosquitto/data/passwd &&
+             exec mosquitto -c /mosquitto/config/mosquitto.conf"
+    restart: unless-stopped
+
+  # Prints aircraft position and answers Pilot 2's online handshake
+  watcher:
+    build: ./watcher
+    environment:
+      BROKER_HOST: ${WATCH_HOST:-broker}
+      BROKER_PORT: ${WATCH_PORT:-1883}
+      BROKER_TLS: ${WATCH_TLS:-false}
+      MQTT_USER: ${WATCH_USER:-pilot}
+      MQTT_PASS: ${WATCH_PASS:-pilot123}
+      REPLY_TOPO: ${REPLY_TOPO:-true}
+    depends_on:
+      - broker
+    restart: unless-stopped

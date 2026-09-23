@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Telemetry link test</title>
+<style>
+  /* Built for the controller screen: bright, high-contrast, big touch targets, no external assets. */
+  :root {
+    --bg: #E9EEF0;
+    --panel: #FFFFFF;
+    --ink: #13232B;
+    --muted: #55656D;
+    --line: #C9D3D7;
+    --action: #0B5CAD;
+    --action-ink: #FFFFFF;
+    --ok: #1E7F4F;
+    --warn: #A15C00;
+    --err: #B3261E;
+    --radius-lg: 14px;
+    --radius-sm: 8px;
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans", sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); color: var(--ink); }
+  body { padding: 20px; font-size: 17px; line-height: 1.45; }
+
+  header { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+  .mode { font-size: 15px; color: var(--muted); }
+  .mode.preview { color: var(--warn); font-weight: 600; }
+
+  main { display: grid; grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: 16px; }
+  @media (max-width: 820px) { main { grid-template-columns: 1fr; } }
+
+  section { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 18px; }
+  h2 { font-size: 18px; margin: 0 0 12px; }
+
+  /* The link state is the one loud element on the page */
+  .state { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 16px; }
+  .light { border-radius: var(--radius-sm); padding: 14px; border: 2px solid var(--line); }
+  .light b { display: block; font-size: 22px; }
+  .light span { font-size: 14px; color: var(--muted); }
+  .light.on  { border-color: var(--ok);  } .light.on b  { color: var(--ok); }
+  .light.off { border-color: var(--line);} .light.off b { color: var(--muted); }
+  .light.bad { border-color: var(--err); } .light.bad b { color: var(--err); }
+
+  fieldset { border: 0; padding: 0; margin: 0 0 14px; }
+  legend { font-weight: 600; margin-bottom: 8px; padding: 0; }
+  label { display: block; font-size: 14px; color: var(--muted); margin: 8px 0 4px; }
+  input { width: 100%; font: inherit; font-size: 16px; padding: 11px 12px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: #FBFCFC; color: var(--ink); }
+  input:focus-visible, button:focus-visible { outline: 3px solid var(--action); outline-offset: 2px; }
+  .hint { font-size: 13px; color: var(--muted); margin-top: 4px; }
+  .hint.warn { color: var(--warn); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+  .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 6px; }
+  button { font: inherit; font-weight: 600; min-height: 50px; padding: 0 20px; border-radius: var(--radius-sm); border: 2px solid var(--action); background: var(--panel); color: var(--action); cursor: pointer; }
+  button.primary { background: var(--action); color: var(--action-ink); }
+  button:disabled { opacity: 0.45; cursor: not-allowed; }
+
+  #log { height: 360px; overflow: auto; background: #F4F7F8; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 10px; font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+  #log .e { color: var(--err); } #log .o { color: var(--ok); } #log .w { color: var(--warn); }
+  .small-actions { display: flex; gap: 10px; margin-top: 10px; }
+  .small-actions button { min-height: 40px; font-size: 14px; padding: 0 14px; }
+
+  @media (prefers-reduced-motion: no-preference) { .light { transition: border-color .2s; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Telemetry link test</h1>
+  <div id="mode" class="mode"></div>
+</header>
+
+<main>
+  <section>
+    <div class="state">
+      <div id="licLight" class="light off"><b>Not verified</b><span>DJI licence</span></div>
+      <div id="mqttLight" class="light off"><b>Not connected</b><span>Broker</span></div>
+    </div>
+
+    <fieldset>
+      <legend>DJI Cloud API app</legend>
+      <label for="appId">App ID</label>
+      <input id="appId" autocomplete="off" inputmode="numeric">
+      <div class="row2">
+        <div><label for="appKey">App Key</label><input id="appKey" autocomplete="off"></div>
+        <div><label for="license">License</label><input id="license" autocomplete="off"></div>
+      </div>
+    </fieldset>
+
+    <fieldset>
+      <legend>Broker</legend>
+      <label for="host">Address</label>
+      <input id="host" placeholder="tcp://192.168.1.50:1883" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <div id="hostHint" class="hint">DJI documents tcp:// and ws:// addresses.</div>
+      <div class="row2">
+        <div><label for="user">Username</label><input id="user" autocomplete="off" autocapitalize="off"></div>
+        <div><label for="pass">Password</label><input id="pass" type="password" autocomplete="off"></div>
+      </div>
+    </fieldset>
+
+    <div class="actions">
+      <button id="connectBtn" class="primary">Connect</button>
+      <button id="disconnectBtn">Disconnect</button>
+      <button id="checkBtn">Check status</button>
+    </div>
+    <div class="hint" style="margin-top:10px">After “Connected”, press back and fly as usual. Pilot 2 keeps sending data until you disconnect here.</div>
+  </section>
+
+  <section>
+    <h2>Activity</h2>
+    <div id="log" role="log" aria-live="polite"></div>
+    <div class="small-actions">
+      <button id="clearBtn">Clear activity</button>
+      <button id="forgetBtn">Forget saved details</button>
+    </div>
+  </section>
+</main>
+
+<script>
+/* ---------- Optional defaults: fill these in so the pilot doesn't have to type ---------- */
+const DEFAULTS = {
+  appId: "",
+  appKey: "",
+  license: "",
+  host: "",            // e.g. "tcp://192.168.1.50:1883" for the local test broker
+  user: "pilot",
+  pass: "pilot123",
+  platformName: "Telemetry link test",
+  workspaceName: "Test workspace"
+};
+/* ---------------------------------------------------------------------------------------- */
+
+const $ = id => document.getElementById(id);
+const FIELDS = ["appId", "appKey", "license", "host", "user", "pass"];
+const STORE_KEY = "telemetry-link-test";
+
+function log(text, cls) {
+  const line = document.createElement("div");
+  if (cls) line.className = cls;
+  line.textContent = new Date().toLocaleTimeString() + "  " + text;
+  $("log").appendChild(line);
+  $("log").scrollTop = $("log").scrollHeight;
+}
+
+/* ---------- Bridge access (real inside Pilot 2, simulated in a normal browser) ---------- */
+const inPilot = !!(window.djiBridge);
+const bridge = inPilot ? window.djiBridge : makePreviewBridge();
+
+function makePreviewBridge() {
+  let verified = false, loaded = false, connected = false, cb = null;
+  const ok = data => JSON.stringify({ code: 0, message: "ok", data });
+  return {
+    platformVerifyLicense(a, k, l) { verified = !!(a && k && l); return verified ? ok(true) : JSON.stringify({ code: 1, message: "Missing app details", data: false }); },
+    platformIsVerified() { return ok(verified); },
+    platformSetWorkspaceId() { return ok(true); },
+    platformSetInformation() { return ok(true); },
+    platformLoadComponent(name, param) {
+      const p = JSON.parse(param); cb = p.connectCallback; loaded = true;
+      setTimeout(() => { connected = true; window[cb] && window[cb](true); }, 800);
+      return ok(true);
+    },
+    platformIsComponentLoaded() { return ok(loaded); },
+    platformUnloadComponent() { loaded = false; connected = false; window[cb] && window[cb](false); return ok(true); },
+    thingGetConnectState() { return ok(connected); }
+  };
+}
+
+/* Every JSBridge call returns a JSON string {code, message, data}; some may return raw values. */
+function call(fn, ...args) {
+  if (typeof bridge[fn] !== "function") {
+    return { code: -1, message: fn + " is not available in this Pilot 2 version", data: null, missing: true };
+  }
+  try {
+    const raw = bridge[fn](...args);
+    if (typeof raw === "string") {
+      try { return JSON.parse(raw); } catch { return { code: 0, data: raw }; }
+    }
+    return { code: 0, data: raw };
+  } catch (e) {
+    return { code: -1, message: String(e), data: null };
+  }
+}
+
+/* ---------- Saved details ---------- */
+function loadSaved() {
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch {}
+  FIELDS.forEach(f => { $(f).value = saved[f] ?? DEFAULTS[f] ?? ""; });
+}
+function save() {
+  const v = {}; FIELDS.forEach(f => v[f] = $(f).value.trim());
+  try { localStorage.setItem(STORE_KEY, JSON.stringify(v)); } catch {}
+  return v;
+}
+function workspaceId() {
+  let id = null;
+  try { id = localStorage.getItem(STORE_KEY + "-ws"); } catch {}
+  if (!id) {
+    id = (crypto.randomUUID ? crypto.randomUUID() :
+      "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, c => {
+        const r = Math.random() * 16 | 0; return (c === "x" ? r : (r & 3 | 8)).toString(16); }));
+    try { localStorage.setItem(STORE_KEY + "-ws", id); } catch {}
+  }
+  return id;
+}
+
+/* ---------- Status lights ---------- */
+function setLight(el, state, text) {
+  el.className = "light " + state;
+  el.querySelector("b").textContent = text;
+}
+function truthy(res) { return res && res.code === 0 && (res.data === true || res.data === "true"); }
+
+function refreshStatus(quiet) {
+  const v = call("platformIsVerified");
+  setLight($("licLight"), truthy(v) ? "on" : "off", truthy(v) ? "Verified" : "Not verified");
+  const loaded = call("platformIsComponentLoaded", "thing");
+  if (!truthy(loaded)) {
+    setLight($("mqttLight"), "off", "Not connected");
+    if (!quiet) log("Broker module not loaded yet.");
+    return;
+  }
+  const s = call("thingGetConnectState");
+  const up = truthy(s);
+  setLight($("mqttLight"), up ? "on" : "bad", up ? "Connected" : "Connecting…");
+  if (!quiet) log("Broker state: " + (up ? "connected" : "not connected yet"), up ? "o" : "w");
+}
+
+/* ---------- Address check ---------- */
+function checkHost() {
+  const h = $("host").value.trim();
+  const hint = $("hostHint");
+  hint.className = "hint";
+  if (!h) { hint.textContent = "DJI documents tcp:// and ws:// addresses."; return; }
+  if (/^mqtt:\/\//i.test(h)) { hint.className = "hint warn"; hint.textContent = "mqtt:// will be sent as tcp:// (same thing)."; return; }
+  if (/^(ssl|mqtts|wss|tls):\/\//i.test(h)) { hint.className = "hint warn"; hint.textContent = "Encrypted addresses aren’t in DJI’s JSBridge docs. Try it, but if it fails, test with tcp:// or ws:// first."; return; }
+  if (!/^(tcp|ws):\/\/[^:\/]+:\d+/i.test(h)) { hint.className = "hint warn"; hint.textContent = "Expected a form like tcp://host:1883 or ws://host:8083/mqtt."; return; }
+  hint.textContent = "Looks right.";
+}
+
+/* ---------- Actions ---------- */
+window.onThingConnect = function (state) {
+  const up = state === true || state === "true" || (typeof state === "string" && /true|success|connected/i.test(state));
+  log("Pilot 2 reports broker link: " + JSON.stringify(state), up ? "o" : "w");
+  refreshStatus(true);
+};
+
+function connect() {
+  const v = save();
+  let host = v.host.replace(/^mqtt:\/\//i, "tcp://");
+  if (!v.appId || !v.appKey || !v.license) { log("Fill in App ID, App Key and License from developer.dji.com.", "e"); return; }
+  if (!host) { log("Fill in the broker address, e.g. tcp://192.168.1.50:1883.", "e"); return; }
+
+  log("Verifying DJI licence…");
+  const lic = call("platformVerifyLicense", v.appId, v.appKey, v.license);
+  if (!truthy(lic)) {
+    log("Licence check failed: " + (lic.message || JSON.stringify(lic)) + ". Check the three values, and that the controller has internet the first time.", "e");
+    refreshStatus(true);
+    return;
+  }
+  log("Licence verified.", "o");
+
+  // Optional housekeeping; older/newer Pilot 2 builds may not have these.
+  const ws = call("platformSetWorkspaceId", workspaceId());
+  if (!ws.missing) log("Workspace ID set: " + (ws.code === 0 ? "ok" : ws.message));
+  const info = call("platformSetInformation", DEFAULTS.platformName, DEFAULTS.workspaceName, "");
+  if (!info.missing) log("Platform name set: " + (info.code === 0 ? "ok" : info.message));
+
+  if (truthy(call("platformIsComponentLoaded", "thing"))) {
+    log("Broker module already loaded; reloading with the current details.");
+    call("platformUnloadComponent", "thing");
+  }
+
+  log("Asking Pilot 2 to connect to " + host + " as " + (v.user || "(no username)") + "…");
+  const res = call("platformLoadComponent", "thing", JSON.stringify({
+    host: host,
+    connectCallback: "onThingConnect",
+    username: v.user,
+    password: v.pass
+  }));
+  if (res.code !== 0) {
+    log("Pilot 2 refused to load the broker module: " + (res.message || JSON.stringify(res)), "e");
+  } else {
+    log("Broker module loaded. Waiting for Pilot 2 to report the connection…");
+  }
+  setTimeout(() => refreshStatus(false), 2500);
+}
+
+function disconnect() {
+  const res = call("platformUnloadComponent", "thing");
+  log(res.code === 0 ? "Disconnected. Pilot 2 stops sending data." : "Disconnect failed: " + res.message, res.code === 0 ? "o" : "e");
+  refreshStatus(true);
+}
+
+/* ---------- Wire up ---------- */
+$("mode").textContent = inPilot ? "Running inside DJI Pilot 2" : "Preview mode: not inside Pilot 2, calls are simulated";
+if (!inPilot) $("mode").classList.add("preview");
+
+loadSaved(); checkHost();
+$("host").addEventListener("input", checkHost);
+$("connectBtn").addEventListener("click", connect);
+$("disconnectBtn").addEventListener("click", disconnect);
+$("checkBtn").addEventListener("click", () => refreshStatus(false));
+$("clearBtn").addEventListener("click", () => { $("log").textContent = ""; });
+$("forgetBtn").addEventListener("click", () => {
+  try { localStorage.removeItem(STORE_KEY); } catch {}
+  FIELDS.forEach(f => $(f).value = DEFAULTS[f] ?? ""); checkHost();
+  log("Saved details cleared.");
+});
+
+log(inPilot ? "Pilot 2 bridge found." : "No Pilot 2 bridge found. Open this page from Pilot 2 → Cloud Service → Open Platforms to use it for real.", inPilot ? "o" : "w");
+refreshStatus(true);
+setInterval(() => refreshStatus(true), 5000);
+</script>
+</body>
+</html>
