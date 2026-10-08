@@ -120,19 +120,20 @@
   </section>
 </main>
 
+<script src="config.js"></script>
 <script>
-/* ---------- Optional defaults: fill these in so the pilot doesn't have to type ---------- */
+/* Defaults come from config.js, which the web container writes from its env variables (.env). */
 const DEFAULTS = {
   appId: "",
   appKey: "",
   license: "",
-  host: "",            // e.g. "tcp://192.168.1.50:1883" for the local test broker
-  user: "pilot",
-  pass: "pilot123",
+  host: "",
+  user: "",
+  pass: "",
   platformName: "Telemetry link test",
   workspaceName: "Test workspace"
 };
-/* ---------------------------------------------------------------------------------------- */
+Object.entries(window.PAGE_CONFIG || {}).forEach(([k, v]) => { if (v) DEFAULTS[k] = v; });
 
 const $ = id => document.getElementById(id);
 const FIELDS = ["appId", "appKey", "license", "host", "user", "pass"];
@@ -189,7 +190,8 @@ function call(fn, ...args) {
 function loadSaved() {
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORE_KEY) || "{}"); } catch {}
-  FIELDS.forEach(f => { $(f).value = saved[f] ?? DEFAULTS[f] ?? ""; });
+  // Empty saved fields fall back to the server's defaults
+  FIELDS.forEach(f => { $(f).value = saved[f] || DEFAULTS[f] || ""; });
 }
 function save() {
   const v = {}; FIELDS.forEach(f => v[f] = $(f).value.trim());
