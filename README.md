@@ -60,7 +60,7 @@ The controller remembers the values from the last **Connect**. After changing `.
 ## Testing only
 
 `docker-compose.yml` also has a local test broker and a `watcher` that prints the aircraft's
-position. They are only for testing. Do not use them in real use.
+position. The test broker is only for testing. Do not use it in real use.
 
 1. Put the test broker in `.env`:
 
@@ -78,6 +78,31 @@ position. They are only for testing. Do not use them in real use.
    ```
 
 With the aircraft on, the log shows its position about every 2 seconds.
+
+## Replying to `update_topo` on another broker
+
+When Pilot 2 connects, it waits for a reply to its `update_topo` message. If the broker you use
+has no back-end that replies, the watcher can do it.
+
+1. Add the broker to `.env`:
+
+   ```
+   WATCH_HOST=broker.example.com
+   WATCH_PORT=1883
+   WATCH_TLS=false        # true for a TLS port, e.g. 8883
+   WATCH_USER=your-broker-username
+   WATCH_PASS=your-broker-password
+   REPLY_TOPO=true
+   ```
+
+2. Start only the watcher, without the local test broker:
+
+   ```bash
+   docker compose up -d --no-deps watcher
+   ```
+
+The watcher must be running whenever the drone flies. It connects over TCP only, not WebSocket.
+If the broker's back-end already replies, set `REPLY_TOPO=false` so Pilot 2 doesn't get two replies.
 
 ## Troubleshooting
 

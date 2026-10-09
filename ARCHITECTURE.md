@@ -51,8 +51,11 @@ Some back-end must reply to `update_topo`, or Pilot 2 may not send the aircraft'
 
 ## Testing services
 
-Only for testing, not part of the real setup:
+The broker is only for testing:
 
 - **`broker`**: Mosquitto with password login, TCP on 1883 and WebSocket on 8083.
 - **`watcher`**: prints aircraft positions and replies to `update_topo`.
   Set `REPLY_TOPO=false` in `.env` if another back-end already replies.
+
+The watcher can also be pointed at a real broker with the `WATCH_*` variables, to reply to
+`update_topo` when that broker has no back-end that does it.
